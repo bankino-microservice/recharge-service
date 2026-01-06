@@ -1,6 +1,5 @@
 package com.marouane.rechargeservice.model.mapper;
 
-import com.marouane.rechargeservice.model.dto.RechargeDTO;
 import com.marouane.rechargeservice.model.dto.RechargeRequestDTO;
 import com.marouane.rechargeservice.model.dto.RechargeResponseDTO;
 import com.marouane.rechargeservice.model.entity.Recharge;

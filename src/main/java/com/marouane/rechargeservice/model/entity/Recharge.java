@@ -1,13 +1,10 @@
 package com.marouane.rechargeservice.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.UUID;
 
 @Entity
 @Data
@@ -16,9 +13,18 @@ import java.util.UUID;
 @Builder
 public class Recharge {
     @Id
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "compte_id")
     private Long accountId;
+
+    @Column(name = "numero_telephone")
     private String phoneNumber;
+
+    @Column(name = "offre_id")
     private Integer offreId;
+
+    @Column(name = "montant")
     private Integer amount;
 }

@@ -6,19 +6,16 @@ import com.marouane.rechargeservice.model.dto.RechargeRequestDTO;
 import com.marouane.rechargeservice.model.dto.RechargeResponseDTO;
 import com.marouane.rechargeservice.model.dto.feign.AccountFeignGetDTO;
 import com.marouane.rechargeservice.model.dto.feign.AccountFeignPostDTO;
+import com.marouane.rechargeservice.model.dto.feign.AccountResponseWrapper;
 import com.marouane.rechargeservice.model.entity.Recharge;
 import com.marouane.rechargeservice.model.enumeration.feign.StatusCompte;
 import com.marouane.rechargeservice.model.mapper.RechargeMapper;
 import com.marouane.rechargeservice.repository.RechargeRepository;
-import feign.FeignException;
-import feign.RetryableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
-import javax.security.auth.login.AccountNotFoundException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,26 +38,27 @@ public class RechargeService {
             default -> false;
         };
     }
-    public List<RechargeResponseDTO>getAllRechargesParCompte(Long comptetId) {
+
+    public List<RechargeResponseDTO> getAllRechargesParCompte(Long compteId) {
         List<RechargeResponseDTO> rechargeResponseDTOS;
         try {
-            rechargeResponseDTOS = rechargeRepository.findAll()
+            rechargeResponseDTOS = rechargeRepository.findByAccountId(compteId)
                     .stream()
                     .map(rechargeMapper::toRechargeResponseDTO)
                     .toList();
+            return rechargeResponseDTOS;
         } catch (DataAccessException e) {
             throw new RuntimeException("Erreur d'accès à la base de données lors de la récupération des recharges", e);
         }
     }
 
-    public RechargeResponseDTO processRecharge(RechargeRequestDTO rechargeRequestDTO) throws AccountNotFoundException {
+    public RechargeResponseDTO processRecharge(RechargeRequestDTO rechargeRequestDTO) {
 
         // 1️⃣ Validation de l'offre
         if (!validerOffreRecharge(rechargeRequestDTO)) {
             throw new InvalidRechargeOfferException(
                     rechargeRequestDTO.getOperator(),
-                    rechargeRequestDTO.getOffreId()
-            );
+                    rechargeRequestDTO.getOffreId());
         }
 
         // 2️⃣ Appel au service Account
@@ -82,19 +80,18 @@ public class RechargeService {
 
         // 6️⃣ Sauvegarde de la recharge
         Recharge recharge = rechargeRepository.save(
-                rechargeMapper.fromRechargeRequestToRecharge(rechargeRequestDTO)
-        );
+                rechargeMapper.fromRechargeRequestToRecharge(rechargeRequestDTO));
 
         return rechargeMapper.toRechargeResponseDTO(recharge);
     }
 
-    private AccountFeignGetDTO callAccountService(Long accountId) throws AccountNotFoundException {
+    private AccountFeignGetDTO callAccountService(Long accountId) {
         try {
-            AccountFeignGetDTO account = accountFeignClient.getAccountById(accountId);
-            if (account == null) {
+            AccountResponseWrapper response = accountFeignClient.getAccountById(accountId);
+            if (response == null || response.getCompte() == null) {
                 throw new AccountNotFoundException("Compte introuvable pour l'ID : " + accountId);
             }
-            return account;
+            return response.getCompte();
         } catch (feign.FeignException.NotFound e) {
             throw new AccountNotFoundException("Compte introuvable pour l'ID : " + accountId);
         } catch (feign.RetryableException e) {
